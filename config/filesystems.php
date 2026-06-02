@@ -41,7 +41,11 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Relative so admin/web <img> tags load from the current origin
+            // (works on localhost AND behind ngrok, avoiding the cross-origin
+            // ngrok interstitial). The mobile API builds absolute URLs via
+            // asset()/APP_URL, so it is unaffected. Set ASSET_URL for a CDN.
+            'url' => env('ASSET_URL', '/storage'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class DiseaseResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'id'               => $this->id,
+            'subcategory_id'   => $this->subcategory_id,
+            'name'             => $this->getTranslations('name'),
+            'slug'             => $this->slug,
+            'description'      => $this->getTranslations('description'),
+            'display_order'    => $this->display_order,
+            'recordings_count' => $this->whenCounted('recordings'),
+            'subcategory'      => new SubcategoryResource($this->whenLoaded('subcategory')),
+            'recordings'       => RecordingResource::collection($this->whenLoaded('recordings')),
+            'aliases'          => $this->whenLoaded(
+                'aliases',
+                fn () => $this->aliases->map(fn ($alias) => $alias->getTranslations('alias'))
+            ),
+        ];
+    }
+}

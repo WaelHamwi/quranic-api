@@ -15,10 +15,21 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('phone')->nullable()->unique();
+            $table->string('country')->nullable();
+            $table->string('gender')->nullable();
+            $table->string('google_id')->nullable();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->string('avatar_path')->nullable();
+            $table->string('password')->nullable();
+            $table->boolean('is_subscribed')->default(false);
+            $table->timestamp('subscription_expires_at')->nullable();
+            $table->unsignedTinyInteger('trial_used_count')->default(0);
+            $table->timestamp('last_active_at')->nullable();
+            $table->string('expo_push_token')->nullable();
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

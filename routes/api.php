@@ -1,61 +1,82 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\GoogleAuthController;
-use App\Http\Controllers\CategoryController;
-// Google OAuth routes for mobile
+use App\Http\Controllers\RecitationController;
+use App\Http\Controllers\ReciterController;
+use App\Http\Controllers\SurahController;
+use App\Http\Controllers\VerseController;
+use App\Http\Controllers\Api\AdhkarController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\DiseaseController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\FeatureFlagController;
+use App\Http\Controllers\Api\FeedbackController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\RecordingController;
+use App\Http\Controllers\Api\SponsorController;
+use App\Http\Controllers\Api\SubcategoryController;
+use App\Http\Controllers\Api\TahsinatController;
+
 Route::post('/auth/google/callback', [GoogleAuthController::class, 'handleMobileGoogleCallback']);
 
-Route::get('/categories', [CategoryController::class, 'index']);
-Route::post('/categories', [CategoryController::class, 'store']);
-Route::get('/categories/{id}', [CategoryController::class, 'show']);
-Route::put('/categories/{id}', [CategoryController::class, 'update']);
-Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+Route::middleware(['throttle:api'])->group(function () {
+    // ── Auth ──────────────────────────────────────────────────────
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
 
+    // ── Mushaf (Quran) ────────────────────────────────────────────
+    Route::get('/surahs', [SurahController::class, 'index']);
+    Route::get('/surahs/{id}', [SurahController::class, 'show']);
+    Route::get('/surahs/{surahId}/recitations', [RecitationController::class, 'bySurah']);
+    Route::get('/verses/search', [VerseController::class, 'search']);
+    Route::get('/reciters', [ReciterController::class, 'index']);
+    Route::get('/reciters/{id}', [ReciterController::class, 'show']);
+    Route::get('/recitations/{id}/audio', [RecitationController::class, 'audio']);
+    Route::get('/recitations/{id}/download', [RecitationController::class, 'download']);
 
-Route::get('/test-data', function () {
-    return response()->json([
-        [
-            'id' => 1,
-            'title' => 'Sample Item 1',
-            'description' => 'This is a test item from the API',
-            'timestamp' => now()->toISOString(),
-        ],
-        [
-            'id' => 2,
-            'title' => 'Sample Item 2',
-            'description' => 'Another test item',
-            'timestamp' => now()->toISOString(),
-        ],
-    ]);
-});
+    // ── Hospital (Categories / Diseases / Recordings) ─────────────
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categories/{slug}', [CategoryController::class, 'show']);
+    Route::get('/subcategories/{slug}', [SubcategoryController::class, 'show']);
+    Route::get('/diseases', [DiseaseController::class, 'index']);
+    Route::get('/diseases/search', [DiseaseController::class, 'search']);
+    Route::get('/general-ruqyah', [RecordingController::class, 'general']);
+    Route::get('/diseases/{slug}', [DiseaseController::class, 'show']);
+    Route::get('/recordings', [RecordingController::class, 'index']);
+    Route::get('/recordings/{id}/stream', [RecordingController::class, 'stream']);
+    Route::post('/recordings/{id}/play', [RecordingController::class, 'play']);
 
-Route::post('/test-data', function (Request $request) {
-    $validated = $request->validate([
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'timestamp' => 'nullable|string',
-    ]);
+    // ── Adhkar ────────────────────────────────────────────────────
+    Route::get('/adhkar/categories', [AdhkarController::class, 'categories']);
+    Route::get('/adhkar/categories/{slug}/items', [AdhkarController::class, 'items']);
+    Route::get('/adhkar/today', [AdhkarController::class, 'today']);
+    Route::get('/adhkar/waking', [AdhkarController::class, 'waking']);
 
-    return response()->json([
-        'id' => rand(100, 999),
-        'title' => $validated['title'],
-        'description' => $validated['description'] ?? null,
-        'timestamp' => $validated['timestamp'] ?? now()->toISOString(),
-    ], 201);
-});
+    // ── Tahsinat ──────────────────────────────────────────────────
+    Route::get('/tahsinat/categories', [TahsinatController::class, 'categories']);
+    Route::get('/tahsinat/categories/{slug}/items', [TahsinatController::class, 'items']);
 
-Route::get('/users', function () {
-    return response()->json([
-        ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'],
-        ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com'],
-    ]);
-});
+    // ── Content ───────────────────────────────────────────────────
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/sponsors', [SponsorController::class, 'index']);
+    Route::get('/sponsor-screen', [SponsorController::class, 'screen']);
+    Route::get('/features', [FeatureFlagController::class, 'index']);
 
-Route::get('/posts', function () {
-    return response()->json([
-        ['id' => 1, 'title' => 'First Post', 'content' => 'Content of first post'],
-        ['id' => 2, 'title' => 'Second Post', 'content' => 'Content of second post'],
-    ]);
+    // ── Authenticated user routes ─────────────────────────────────
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/logout', [AuthController::class, 'logout']);
+
+        Route::get('/favorites', [FavoriteController::class, 'index']);
+        Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
+
+        Route::post('/feedback', [FeedbackController::class, 'store']);
+
+        Route::get('/notifications/preferences', [NotificationController::class, 'preferences']);
+        Route::post('/notifications/preferences', [NotificationController::class, 'updatePreferences']);
+        Route::post('/notifications/token', [NotificationController::class, 'registerToken']);
+    });
 });

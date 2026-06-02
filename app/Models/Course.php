@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Concerns\HasTranslations;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+
+class Course extends Model
+{
+    use HasTranslations;
+
+    protected $fillable = [
+        'title', 'description', 'instructor_name', 'price', 'start_date',
+        'whatsapp_link', 'is_coming_soon', 'is_active', 'display_order',
+    ];
+
+    public array $translatable = ['title', 'description'];
+
+    protected function casts(): array
+    {
+        return [
+            'price'          => 'decimal:2',
+            'start_date'     => 'date',
+            'is_coming_soon' => 'boolean',
+            'is_active'      => 'boolean',
+            'display_order'  => 'integer',
+        ];
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeOrdered(Builder $query): Builder
+    {
+        return $query->orderBy('display_order')->orderBy('id');
+    }
+}
