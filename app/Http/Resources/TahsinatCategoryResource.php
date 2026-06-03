@@ -12,11 +12,9 @@ class TahsinatCategoryResource extends JsonResource
             'id'            => $this->id,
             'name'          => $this->getTranslations('name'),
             'slug'          => $this->slug,
-            'is_self'       => $this->is_self,
-            'is_for_others' => $this->is_for_others,
-            'random_order'  => $this->random_order,
             'display_order' => $this->display_order,
             'items_count'   => $this->whenCounted('items'),
+            'sections'      => TahsinatSectionResource::collection($this->whenLoaded('sections')),
             'items'         => TahsinatItemResource::collection($this->whenLoaded('items')),
         ];
     }

@@ -17,7 +17,7 @@ class TahsinatRepository implements TahsinatRepositoryInterface
     {
         return TahsinatCategory::active()
             ->where('slug', $slug)
-            ->with(['items' => fn ($q) => $q->ordered()])
+            ->with($this->contentEagerLoads())
             ->first();
     }
 
@@ -29,8 +29,19 @@ class TahsinatRepository implements TahsinatRepositoryInterface
             return new Collection();
         }
 
-        $items = $category->items()->ordered()->get();
+        return $category->items()->ordered()->get();
+    }
 
-        return $category->random_order ? $items->shuffle()->values() : $items;
+    /**
+     * Eager-load a category's sections (with their items) and any items that
+     * are not assigned to a section, all in manual order. Randomization of
+     * `order_randomly` sections is applied client-side, per view.
+     */
+    private function contentEagerLoads(): array
+    {
+        return [
+            'sections' => fn ($q) => $q->ordered()->with(['items' => fn ($q) => $q->ordered()]),
+            'items'    => fn ($q) => $q->whereNull('tahsinat_section_id')->ordered(),
+        ];
     }
 }

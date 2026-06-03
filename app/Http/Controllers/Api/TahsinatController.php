@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TahsinatCategoryResource;
-use App\Http\Resources\TahsinatItemResource;
 use App\Services\TahsinatService;
 use Illuminate\Http\JsonResponse;
 
@@ -30,7 +29,7 @@ class TahsinatController extends Controller
                 return $this->error('Tahsinat category not found', 404);
             }
 
-            return $this->success(TahsinatItemResource::collection($this->service->itemsByCategorySlug($slug)));
+            return $this->success(new TahsinatCategoryResource($category));
         } catch (\Throwable $e) {
             return $this->error('Server error', 500);
         }

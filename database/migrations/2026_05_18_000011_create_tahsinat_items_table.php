@@ -11,10 +11,13 @@ return new class extends Migration
         Schema::create('tahsinat_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tahsinat_category_id')->constrained('tahsinat_categories')->cascadeOnDelete();
-            $table->json('label');
-            $table->json('text');
+            $table->foreignId('tahsinat_section_id')->nullable()->constrained('tahsinat_sections')->nullOnDelete();
+            $table->json('label')->nullable();
+            $table->json('text')->nullable();
+            $table->string('image')->nullable();
             $table->unsignedInteger('repetitions')->default(1);
             $table->json('hint')->nullable();
+            $table->string('applicability')->default('both');
             $table->unsignedInteger('display_order')->default(0);
             $table->timestamps();
         });

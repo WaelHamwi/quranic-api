@@ -12,8 +12,8 @@ class TahsinatItem extends Model
     use HasTranslations;
 
     protected $fillable = [
-        'tahsinat_category_id', 'label', 'text',
-        'repetitions', 'hint', 'display_order',
+        'tahsinat_category_id', 'tahsinat_section_id', 'label', 'text', 'image',
+        'repetitions', 'hint', 'applicability', 'display_order',
     ];
 
     public array $translatable = ['label', 'text', 'hint'];
@@ -22,6 +22,7 @@ class TahsinatItem extends Model
     {
         return [
             'tahsinat_category_id' => 'integer',
+            'tahsinat_section_id'  => 'integer',
             'repetitions'          => 'integer',
             'display_order'        => 'integer',
         ];
@@ -30,6 +31,22 @@ class TahsinatItem extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(TahsinatCategory::class, 'tahsinat_category_id');
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(TahsinatSection::class, 'tahsinat_section_id');
+    }
+
+    public function imageUrl(): ?string
+    {
+        if (! $this->image) {
+            return null;
+        }
+
+        return str_starts_with($this->image, 'http')
+            ? $this->image
+            : asset('storage/' . ltrim($this->image, '/'));
     }
 
     public function scopeOrdered(Builder $query): Builder

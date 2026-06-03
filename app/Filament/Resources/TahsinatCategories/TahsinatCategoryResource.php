@@ -33,10 +33,8 @@ class TahsinatCategoryResource extends Resource
         return $schema->components([
             TextInput::make('name.ar')->label('Name (Arabic)')->required()->maxLength(255),
             TextInput::make('name.en')->label('Name (English)')->required()->maxLength(255),
-            TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true),
-            Toggle::make('is_self')->label('For Self'),
-            Toggle::make('is_for_others')->label('For Others'),
-            Toggle::make('random_order')->label('Random Order'),
+            TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true)
+                ->helperText('e.g. "self" (Self-Fortification) or "others" (Fortification for Others).'),
             TextInput::make('display_order')->numeric()->default(0),
             Toggle::make('is_active')->default(true),
         ]);
@@ -48,9 +46,6 @@ class TahsinatCategoryResource extends Resource
             ->columns([
                 TextColumn::make('name')->label('Name')->searchable(),
                 TextColumn::make('slug')->searchable(),
-                IconColumn::make('is_self')->label('Self')->boolean(),
-                IconColumn::make('is_for_others')->label('Others')->boolean(),
-                IconColumn::make('random_order')->label('Random')->boolean(),
                 TextColumn::make('items_count')->counts('items')->label('Items'),
                 IconColumn::make('is_active')->boolean(),
             ])
