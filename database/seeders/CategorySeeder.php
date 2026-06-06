@@ -34,14 +34,12 @@ class CategorySeeder extends Seeder
                             [
                                 'name'        => ['ar' => 'السحر', 'en' => 'Magic (Sihr)'],
                                 'slug'        => 'magic-sihr',
-                                'description' => ['ar' => 'رقية شرعية لعلاج السحر', 'en' => 'Ruqyah for treating magic'],
                                 'general_recording_sessions' => [1, 2, 3],
                                 'aliases'     => [['ar' => 'سحر', 'en' => 'Black Magic'], ['ar' => 'شعوذة', 'en' => 'Sorcery']],
                             ],
                             [
                                 'name'        => ['ar' => 'المس', 'en' => 'Touch (Mass)'],
                                 'slug'        => 'touch-mass',
-                                'description' => ['ar' => 'رقية شرعية لعلاج المس', 'en' => 'Ruqyah for treating possession'],
                                 'general_recording_sessions' => [],
                                 'aliases'     => [['ar' => 'مس شيطاني', 'en' => 'Demonic Touch']],
                             ],
@@ -54,7 +52,6 @@ class CategorySeeder extends Seeder
                             [
                                 'name'        => ['ar' => 'العين', 'en' => 'Evil Eye'],
                                 'slug'        => 'evil-eye',
-                                'description' => ['ar' => 'رقية شرعية لعلاج العين', 'en' => 'Ruqyah for treating the evil eye'],
                                 'general_recording_sessions' => [1, 2, 3],
                                 'aliases'     => [['ar' => 'إصابة بالعين', 'en' => 'Eye Strike']],
                             ],
@@ -74,7 +71,6 @@ class CategorySeeder extends Seeder
                             [
                                 'name'        => ['ar' => 'القلق', 'en' => 'Anxiety'],
                                 'slug'        => 'anxiety',
-                                'description' => ['ar' => 'رقية وأذكار لتهدئة القلق', 'en' => 'Ruqyah and adhkar to ease anxiety'],
                                 'general_recording_sessions' => [],
                                 'aliases'     => [['ar' => 'توتر', 'en' => 'Stress']],
                             ],
@@ -107,7 +103,6 @@ class CategorySeeder extends Seeder
                         'subcategory_id' => $subcategory->id,
                         'name'           => $disData['name'],
                         'slug'           => $disData['slug'],
-                        'description'    => $disData['description'],
                         'display_order'  => $disIndex,
                         'is_active'      => true,
                     ]);

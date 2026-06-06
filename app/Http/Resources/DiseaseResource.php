@@ -13,7 +13,7 @@ class DiseaseResource extends JsonResource
             'subcategory_id'   => $this->subcategory_id,
             'name'             => $this->getTranslations('name'),
             'slug'             => $this->slug,
-            'description'      => $this->getTranslations('description'),
+            'icon'             => $this->iconUrl(),
             'display_order'    => $this->display_order,
             'recordings_count' => $this->whenCounted('recordings'),
             'subcategory'      => new SubcategoryResource($this->whenLoaded('subcategory')),

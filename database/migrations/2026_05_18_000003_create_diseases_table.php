@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('subcategory_id')->constrained('subcategories')->cascadeOnDelete();
             $table->json('name');
             $table->string('slug')->unique();
-            $table->json('description')->nullable();
+            $table->string('icon')->nullable();
             $table->unsignedInteger('display_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();

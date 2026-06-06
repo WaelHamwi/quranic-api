@@ -10,9 +10,12 @@ return new class extends Migration
     {
         Schema::create('recordings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('disease_id')->constrained('diseases')->cascadeOnDelete();
+            $table->foreignId('disease_id')->nullable()->constrained('diseases')->cascadeOnDelete();
+            $table->foreignId('category_id')->nullable()->constrained('categories')->cascadeOnDelete();
+            $table->foreignId('subcategory_id')->nullable()->constrained('subcategories')->cascadeOnDelete();
             $table->unsignedSmallInteger('session_number')->default(1);
             $table->json('title');
+            $table->json('description')->nullable();
             $table->string('audio_path', 500)->nullable();
             $table->unsignedInteger('duration_seconds')->nullable();
             $table->boolean('is_general')->default(false);
@@ -21,6 +24,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             $table->index(['disease_id', 'session_number']);
+            $table->index(['category_id', 'session_number']);
+            $table->index(['subcategory_id', 'session_number']);
         });
     }
 

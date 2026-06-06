@@ -21,7 +21,10 @@ class CategoryRepository implements CategoryRepositoryInterface
     {
         return Category::active()
             ->where('slug', $slug)
-            ->with(['subcategories' => fn ($q) => $q->active()->ordered()])
+            ->with([
+                'subcategories' => fn ($q) => $q->active()->ordered()->withCount(['diseases', 'recordings']),
+                'recordings'    => fn ($q) => $q->orderBy('session_number'),
+            ])
             ->first();
     }
 
@@ -29,7 +32,11 @@ class CategoryRepository implements CategoryRepositoryInterface
     {
         return Subcategory::active()
             ->where('slug', $slug)
-            ->with(['category', 'diseases' => fn ($q) => $q->active()->ordered()])
+            ->with([
+                'category',
+                'diseases'   => fn ($q) => $q->active()->ordered(),
+                'recordings' => fn ($q) => $q->orderBy('session_number'),
+            ])
             ->first();
     }
 }

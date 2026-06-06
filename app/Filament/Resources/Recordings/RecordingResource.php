@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Recordings;
 
 use App\Filament\Resources\Recordings\Pages\ManageRecordings;
 use App\Jobs\CompressAudioJob;
+use App\Models\Category;
 use App\Models\Disease;
 use App\Models\Recording;
+use App\Models\Subcategory;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -14,9 +16,11 @@ use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -37,13 +41,37 @@ class RecordingResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
+            // A recording attaches to exactly ONE level (the leaf): a disease,
+            // a subcategory (with no diseases), or a category (with no
+            // subcategories). Picking one disables the other two.
             Select::make('disease_id')
                 ->label('Disease')
                 ->options(fn () => Disease::ordered()->get()->pluck('name', 'id'))
                 ->searchable()
-                ->required(),
+                ->nullable()
+                ->live()
+                ->disabled(fn (Get $get) => filled($get('category_id')) || filled($get('subcategory_id')))
+                ->helperText('Attach to a Disease — OR pick a Subcategory/Category below instead.'),
+            Select::make('subcategory_id')
+                ->label('Subcategory (without diseases)')
+                ->options(fn () => Subcategory::doesntHave('diseases')->ordered()->get()->pluck('name', 'id'))
+                ->searchable()
+                ->nullable()
+                ->live()
+                ->disabled(fn (Get $get) => filled($get('disease_id')) || filled($get('category_id')))
+                ->helperText('Only subcategories that have no diseases can hold recordings directly.'),
+            Select::make('category_id')
+                ->label('Category (without subcategories)')
+                ->options(fn () => Category::doesntHave('subcategories')->ordered()->get()->pluck('name', 'id'))
+                ->searchable()
+                ->nullable()
+                ->live()
+                ->disabled(fn (Get $get) => filled($get('disease_id')) || filled($get('subcategory_id')))
+                ->helperText('Only categories that have no subcategories can hold recordings directly.'),
             TextInput::make('title.ar')->label('Title (Arabic)')->required()->maxLength(255),
             TextInput::make('title.en')->label('Title (English)')->required()->maxLength(255),
+            Textarea::make('description.ar')->label('Description (Arabic)')->rows(4),
+            Textarea::make('description.en')->label('Description (English)')->rows(4),
             FileUpload::make('audio_path')
                 ->label('Recording File')
                 ->disk('public')
@@ -67,7 +95,9 @@ class RecordingResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('title')->label('Title')->searchable(),
-                TextColumn::make('disease.name')->label('Disease'),
+                TextColumn::make('disease.name')->label('Disease')->placeholder('—'),
+                TextColumn::make('subcategory.name')->label('Subcategory')->placeholder('—'),
+                TextColumn::make('category.name')->label('Category')->placeholder('—'),
                 TextColumn::make('session_number')->label('Session')->sortable(),
                 ToggleColumn::make('is_general')->label('General Ruqyah'),
                 TextColumn::make('duration_seconds')->label('Duration (s)'),
@@ -78,6 +108,12 @@ class RecordingResource extends Resource
                 SelectFilter::make('disease_id')
                     ->label('Disease')
                     ->options(fn () => Disease::ordered()->get()->pluck('name', 'id')),
+                SelectFilter::make('subcategory_id')
+                    ->label('Subcategory')
+                    ->options(fn () => Subcategory::doesntHave('diseases')->ordered()->get()->pluck('name', 'id')),
+                SelectFilter::make('category_id')
+                    ->label('Category')
+                    ->options(fn () => Category::doesntHave('subcategories')->ordered()->get()->pluck('name', 'id')),
                 SelectFilter::make('is_general')->options(['1' => 'General Ruqyah', '0' => 'Disease-specific']),
             ])
             ->recordActions([

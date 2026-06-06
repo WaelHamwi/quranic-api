@@ -10,13 +10,16 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\Str;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -37,14 +40,25 @@ class DiseaseResource extends Resource
         return $schema->components([
             Select::make('subcategory_id')
                 ->label('Subcategory')
-                ->options(fn () => Subcategory::ordered()->get()->pluck('name', 'id'))
+                ->options(fn () => Subcategory::doesntHave('recordings')->ordered()->get()->pluck('name', 'id'))
                 ->searchable()
-                ->required(),
+                ->required()
+                ->helperText('Only subcategories without directly-attached recordings can have diseases.'),
             TextInput::make('name.ar')->label('Name (Arabic)')->required()->maxLength(255),
-            TextInput::make('name.en')->label('Name (English)')->required()->maxLength(255),
-            TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true),
-            Textarea::make('description.ar')->label('Description (Arabic)')->rows(3),
-            Textarea::make('description.en')->label('Description (English)')->rows(3),
+            TextInput::make('name.en')
+                ->label('Name (English)')
+                ->required()
+                ->maxLength(255)
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn (Set $set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
+            FileUpload::make('icon')
+                ->label('Icon')
+                ->image()
+                ->acceptedFileTypes(['image/png', 'image/svg+xml'])
+                ->maxSize(500)
+                ->disk('public')
+                ->directory('diseases')
+                ->helperText('PNG or SVG, max 500 KB.'),
             TextInput::make('display_order')->numeric()->default(0),
             Toggle::make('is_active')->default(true),
         ]);
@@ -54,6 +68,7 @@ class DiseaseResource extends Resource
     {
         return $table
             ->columns([
+                ImageColumn::make('icon')->label('Icon')->disk('public'),
                 TextColumn::make('name')->label('Name')->searchable(),
                 TextColumn::make('subcategory.name')->label('Subcategory'),
                 TextColumn::make('slug')->searchable(),

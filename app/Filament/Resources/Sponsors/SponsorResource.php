@@ -11,10 +11,10 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
@@ -40,11 +40,29 @@ class SponsorResource extends Resource
             FileUpload::make('logo_path')
                 ->label('Logo')
                 ->image()
+                ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'])
+                ->maxSize(5120)
                 ->disk('public')
-                ->directory('sponsors'),
+                ->directory('sponsors')
+                ->helperText('PNG, JPG, WEBP, GIF or SVG (max 5 MB).'),
             TextInput::make('website_url')->url()->maxLength(255),
-            TagsInput::make('target_countries')
-                ->helperText('ISO country codes, e.g. SA, AE, EG. Leave empty for all.'),
+            Toggle::make('target_all_countries')
+                ->label('Show to all countries')
+                ->helperText('On = the sponsor screen shows to every user regardless of country.')
+                ->default(true)
+                ->live(),
+            Select::make('target_countries')
+                ->label('Target countries')
+                ->multiple()
+                ->searchable()
+                ->native(false)
+                // Show every country (default cap is 50) so the user can scroll
+                // the whole list / keep loading more as they scroll.
+                ->optionsLimit(fn () => \count((array) config('countries')))
+                ->options(fn () => array_combine(config('countries'), config('countries')))
+                ->helperText('Only users from these countries will see this sponsor.')
+                ->visible(fn (Get $get) => ! $get('target_all_countries'))
+                ->required(fn (Get $get) => ! $get('target_all_countries')),
             Select::make('target_genders')
                 ->multiple()
                 ->options(['male' => 'Male', 'female' => 'Female'])
@@ -63,6 +81,12 @@ class SponsorResource extends Resource
                 ImageColumn::make('logo_path')->label('Logo')->disk('public'),
                 TextColumn::make('name')->label('Name')->searchable(),
                 TextColumn::make('website_url')->label('Website')->limit(30),
+                IconColumn::make('target_all_countries')->label('All countries')->boolean(),
+                TextColumn::make('target_countries')
+                    ->label('Countries')
+                    ->badge()
+                    ->placeholder('All')
+                    ->limitList(2),
                 IconColumn::make('is_featured')->label('Featured')->boolean(),
                 IconColumn::make('display_on_launch')->label('On Launch')->boolean(),
                 IconColumn::make('is_active')->boolean(),

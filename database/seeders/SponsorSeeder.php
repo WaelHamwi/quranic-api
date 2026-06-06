@@ -12,15 +12,16 @@ class SponsorSeeder extends Seeder
     {
         if (Sponsor::count() === 0) {
             Sponsor::create([
-                'name'              => ['ar' => 'الراعي الرسمي', 'en' => 'Official Sponsor'],
-                'logo_path'         => null,
-                'website_url'       => 'https://example.com',
-                'target_countries'  => ['SA', 'AE', 'EG'],
-                'target_genders'    => ['male', 'female'],
-                'is_featured'       => true,
-                'display_on_launch' => true,
-                'display_order'     => 0,
-                'is_active'         => true,
+                'name'                 => ['ar' => 'الراعي الرسمي', 'en' => 'Official Sponsor'],
+                'logo_path'            => null,
+                'website_url'          => 'https://example.com',
+                'target_all_countries' => true,
+                'target_countries'     => [],
+                'target_genders'       => ['male', 'female'],
+                'is_featured'          => true,
+                'display_on_launch'    => true,
+                'display_order'        => 0,
+                'is_active'            => true,
             ]);
         }
 

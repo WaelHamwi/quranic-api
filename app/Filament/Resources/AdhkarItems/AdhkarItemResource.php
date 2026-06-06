@@ -60,6 +60,8 @@ class AdhkarItemResource extends Resource
             FileUpload::make('image')
                 ->label('Image (optional)')
                 ->image()
+                ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'])
+                ->maxSize(5120)
                 ->disk('public')
                 ->directory('adhkar'),
             TextInput::make('repetitions')->numeric()->minValue(1)->default(1)->required()

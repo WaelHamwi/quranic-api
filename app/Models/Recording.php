@@ -13,16 +13,18 @@ class Recording extends Model
     use HasTranslations, SoftDeletes;
 
     protected $fillable = [
-        'disease_id', 'session_number', 'title', 'audio_path',
-        'duration_seconds', 'is_general', 'plays_count', 'created_by',
+        'disease_id', 'category_id', 'subcategory_id', 'session_number', 'title', 'description',
+        'audio_path', 'duration_seconds', 'is_general', 'plays_count', 'created_by',
     ];
 
-    public array $translatable = ['title'];
+    public array $translatable = ['title', 'description'];
 
     protected function casts(): array
     {
         return [
             'disease_id'       => 'integer',
+            'category_id'      => 'integer',
+            'subcategory_id'   => 'integer',
             'session_number'   => 'integer',
             'duration_seconds' => 'integer',
             'is_general'       => 'boolean',
@@ -35,9 +37,13 @@ class Recording extends Model
     {
         static::creating(function (Recording $recording) {
             if (! $recording->session_number) {
-                $last = static::where('disease_id', $recording->disease_id)
-                    ->max('session_number');
-                $recording->session_number = ($last ?? 0) + 1;
+                // Scope session numbering to the parent (category, subcategory or disease).
+                $query = match (true) {
+                    (bool) $recording->category_id    => static::where('category_id', $recording->category_id),
+                    (bool) $recording->subcategory_id => static::where('subcategory_id', $recording->subcategory_id),
+                    default                           => static::where('disease_id', $recording->disease_id),
+                };
+                $recording->session_number = ($query->max('session_number') ?? 0) + 1;
             }
         });
     }
@@ -45,6 +51,16 @@ class Recording extends Model
     public function disease(): BelongsTo
     {
         return $this->belongsTo(Disease::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function subcategory(): BelongsTo
+    {
+        return $this->belongsTo(Subcategory::class);
     }
 
     public function creator(): BelongsTo

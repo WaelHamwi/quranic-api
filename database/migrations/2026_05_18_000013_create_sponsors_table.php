@@ -13,6 +13,7 @@ return new class extends Migration
             $table->json('name');
             $table->string('logo_path', 500)->nullable();
             $table->string('website_url')->nullable();
+            $table->boolean('target_all_countries')->default(true);
             $table->json('target_countries')->nullable();
             $table->json('target_genders')->nullable();
             $table->boolean('is_featured')->default(false);

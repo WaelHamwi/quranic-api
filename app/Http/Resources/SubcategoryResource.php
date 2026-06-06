@@ -13,9 +13,13 @@ class SubcategoryResource extends JsonResource
             'category_id'   => $this->category_id,
             'name'          => $this->getTranslations('name'),
             'slug'          => $this->slug,
-            'display_order' => $this->display_order,
-            'category'      => new CategoryResource($this->whenLoaded('category')),
-            'diseases'      => DiseaseResource::collection($this->whenLoaded('diseases')),
+            'icon'          => $this->iconUrl(),
+            'display_order'    => $this->display_order,
+            'diseases_count'   => $this->whenCounted('diseases'),
+            'recordings_count' => $this->whenCounted('recordings'),
+            'category'         => new CategoryResource($this->whenLoaded('category')),
+            'diseases'         => DiseaseResource::collection($this->whenLoaded('diseases')),
+            'recordings'       => RecordingResource::collection($this->whenLoaded('recordings')),
         ];
     }
 }

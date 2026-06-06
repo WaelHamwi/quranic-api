@@ -12,9 +12,11 @@ class CategoryResource extends JsonResource
             'id'            => $this->id,
             'name'          => $this->getTranslations('name'),
             'slug'          => $this->slug,
-            'icon'          => $this->icon,
+            'icon'          => $this->iconUrl(),
+            'type'          => $this->type,
             'display_order' => $this->display_order,
             'subcategories' => SubcategoryResource::collection($this->whenLoaded('subcategories')),
+            'recordings'    => RecordingResource::collection($this->whenLoaded('recordings')),
         ];
     }
 }

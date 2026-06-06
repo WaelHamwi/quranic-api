@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name'              => 'Test User',
                 'email_verified_at' => now(),
-                'country'           => 'SA',
+                'country'           => 'Saudi Arabia',
                 'gender'            => 'male',
                 'password'          => bcrypt('User@1234'),
             ]
