@@ -68,8 +68,8 @@ class RecordingResource extends Resource
                 ->live()
                 ->disabled(fn (Get $get) => filled($get('disease_id')) || filled($get('subcategory_id')))
                 ->helperText('Only categories that have no subcategories can hold recordings directly.'),
-            TextInput::make('title.ar')->label('Title (Arabic)')->required()->maxLength(255),
-            TextInput::make('title.en')->label('Title (English)')->required()->maxLength(255),
+            TextInput::make('title.ar')->label('Title (Arabic)')->maxLength(255),
+            TextInput::make('title.en')->label('Title (English)')->maxLength(255),
             Textarea::make('description.ar')->label('Description (Arabic)')->rows(4),
             Textarea::make('description.en')->label('Description (English)')->rows(4),
             FileUpload::make('audio_path')
@@ -84,6 +84,9 @@ class RecordingResource extends Resource
                 ->maxSize(204800)
                 ->helperText('Accepted: mp3, mp4, ogg, wav (max 200 MB).'),
             TextInput::make('duration_seconds')->numeric()->minValue(0),
+            Toggle::make('is_free')
+                ->label('Free Session')
+                ->helperText('Mark this as the free session for its disease / category. Enabling it will automatically lock whichever session was free before.'),
             Toggle::make('is_general')
                 ->label('General Ruqyah')
                 ->helperText('Include this recording in the General Ruqyah playlist.'),
@@ -99,6 +102,7 @@ class RecordingResource extends Resource
                 TextColumn::make('subcategory.name')->label('Subcategory')->placeholder('—'),
                 TextColumn::make('category.name')->label('Category')->placeholder('—'),
                 TextColumn::make('session_number')->label('Session')->sortable(),
+                ToggleColumn::make('is_free')->label('Free'),
                 ToggleColumn::make('is_general')->label('General Ruqyah'),
                 TextColumn::make('duration_seconds')->label('Duration (s)'),
                 TextColumn::make('plays_count')->label('Plays')->sortable(),

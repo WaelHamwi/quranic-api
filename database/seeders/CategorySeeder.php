@@ -115,10 +115,7 @@ class CategorySeeder extends Seeder
                         Recording::create([
                             'disease_id'       => $disease->id,
                             'session_number'   => $session,
-                            'title'            => [
-                                'ar' => "الجلسة {$session}",
-                                'en' => "Session {$session}",
-                            ],
+                            'is_free'          => $session === 1,
                             'audio_path'       => self::SAMPLE_AUDIO . '/' . str_pad((string) $session, 3, '0', STR_PAD_LEFT) . '.mp3',
                             'duration_seconds' => 300,
                             'is_general'       => in_array($session, $disData['general_recording_sessions']),

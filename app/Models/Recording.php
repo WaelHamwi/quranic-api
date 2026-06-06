@@ -14,7 +14,7 @@ class Recording extends Model
 
     protected $fillable = [
         'disease_id', 'category_id', 'subcategory_id', 'session_number', 'title', 'description',
-        'audio_path', 'duration_seconds', 'is_general', 'plays_count', 'created_by',
+        'audio_path', 'duration_seconds', 'is_free', 'is_general', 'plays_count', 'created_by',
     ];
 
     public array $translatable = ['title', 'description'];
@@ -27,6 +27,7 @@ class Recording extends Model
             'subcategory_id'   => 'integer',
             'session_number'   => 'integer',
             'duration_seconds' => 'integer',
+            'is_free'          => 'boolean',
             'is_general'       => 'boolean',
             'plays_count'      => 'integer',
             'created_by'       => 'integer',
@@ -45,6 +46,40 @@ class Recording extends Model
                 };
                 $recording->session_number = ($query->max('session_number') ?? 0) + 1;
             }
+
+            // First recording in its group automatically becomes the free session.
+            if (! $recording->is_free) {
+                $freeExists = match (true) {
+                    (bool) $recording->disease_id     => static::where('disease_id', $recording->disease_id)->where('is_free', true)->exists(),
+                    (bool) $recording->subcategory_id => static::where('subcategory_id', $recording->subcategory_id)->where('is_free', true)->exists(),
+                    (bool) $recording->category_id    => static::where('category_id', $recording->category_id)->where('is_free', true)->exists(),
+                    default                           => true,
+                };
+                if (! $freeExists) {
+                    $recording->is_free = true;
+                }
+            }
+        });
+
+        // When a recording is marked free, clear the flag on all siblings in the same group.
+        static::saved(function (Recording $recording) {
+            if (! $recording->is_free) {
+                return;
+            }
+
+            $siblings = static::where('id', '!=', $recording->id)->where('is_free', true);
+
+            if ($recording->disease_id) {
+                $siblings->where('disease_id', $recording->disease_id);
+            } elseif ($recording->subcategory_id) {
+                $siblings->where('subcategory_id', $recording->subcategory_id);
+            } elseif ($recording->category_id) {
+                $siblings->where('category_id', $recording->category_id);
+            } else {
+                return;
+            }
+
+            $siblings->update(['is_free' => false]);
         });
     }
 
@@ -70,12 +105,12 @@ class Recording extends Model
 
     public function scopeFree(Builder $query): Builder
     {
-        return $query->where('session_number', 1);
+        return $query->where('is_free', true);
     }
 
     public function scopePremium(Builder $query): Builder
     {
-        return $query->where('session_number', '>', 1);
+        return $query->where('is_free', false);
     }
 
     public function scopeGeneral(Builder $query): Builder
@@ -85,7 +120,7 @@ class Recording extends Model
 
     public function isFreeSession(): bool
     {
-        return $this->session_number === 1;
+        return $this->is_free;
     }
 
     public function streamUrl(): ?string
