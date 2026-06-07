@@ -3,14 +3,12 @@
 namespace App\Filament\Resources\Favorites;
 
 use App\Filament\Resources\Favorites\Pages\ManageFavorites;
+use App\Filament\Resources\Favorites\Schemas\FavoriteForm;
+use App\Filament\Resources\Favorites\Tables\FavoritesTable;
 use App\Models\Favorite;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use UnitEnum;
 
@@ -31,25 +29,17 @@ class FavoriteResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components([]);
+        return $schema->components(FavoriteForm::getSchema());
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->columns([
-                TextColumn::make('user.name')->label('User')->searchable(),
-                TextColumn::make('user.email')->label('Email')->searchable(),
-                TextColumn::make('disease.name')->label('Disease'),
-                TextColumn::make('created_at')->dateTime('d M Y')->sortable(),
-            ])
-            ->defaultSort('created_at', 'desc')
-            ->recordActions([
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([DeleteBulkAction::make()]),
-            ]);
+            ->columns(FavoritesTable::getColumns())
+            ->filters(FavoritesTable::getFilters())
+            ->actions(FavoritesTable::getActions())
+            ->bulkActions(FavoritesTable::getBulkActions())
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getPages(): array

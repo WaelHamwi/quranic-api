@@ -13,7 +13,6 @@ class AdhkarItemResource extends JsonResource
             'category_id'   => $this->adhkar_category_id,
             'section_id'    => $this->adhkar_section_id,
             'text'          => $this->getTranslations('text'),
-            'image_url'     => $this->imageUrl(),
             'repetitions'   => $this->repetitions,
             'hint'          => $this->getTranslations('hint'),
             'daleel'        => $this->getTranslations('daleel'),

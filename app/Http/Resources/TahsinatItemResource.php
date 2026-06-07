@@ -14,7 +14,6 @@ class TahsinatItemResource extends JsonResource
             'section_id'    => $this->tahsinat_section_id,
             'label'         => $this->getTranslations('label'),
             'text'          => $this->getTranslations('text'),
-            'image_url'     => $this->imageUrl(),
             'repetitions'   => $this->repetitions,
             'hint'          => $this->getTranslations('hint'),
             'applicability' => $this->applicability,

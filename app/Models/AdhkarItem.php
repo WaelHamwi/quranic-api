@@ -12,7 +12,7 @@ class AdhkarItem extends Model
     use HasTranslations;
 
     protected $fillable = [
-        'adhkar_category_id', 'adhkar_section_id', 'text', 'image',
+        'adhkar_category_id', 'adhkar_section_id', 'text',
         'repetitions', 'hint', 'daleel', 'display_order',
     ];
 
@@ -36,17 +36,6 @@ class AdhkarItem extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(AdhkarSection::class, 'adhkar_section_id');
-    }
-
-    public function imageUrl(): ?string
-    {
-        if (! $this->image) {
-            return null;
-        }
-
-        return str_starts_with($this->image, 'http')
-            ? $this->image
-            : asset('storage/' . ltrim($this->image, '/'));
     }
 
     public function scopeOrdered(Builder $query): Builder

@@ -12,7 +12,7 @@ class TahsinatItem extends Model
     use HasTranslations;
 
     protected $fillable = [
-        'tahsinat_category_id', 'tahsinat_section_id', 'label', 'text', 'image',
+        'tahsinat_category_id', 'tahsinat_section_id', 'label', 'text',
         'repetitions', 'hint', 'applicability', 'display_order',
     ];
 
@@ -36,17 +36,6 @@ class TahsinatItem extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(TahsinatSection::class, 'tahsinat_section_id');
-    }
-
-    public function imageUrl(): ?string
-    {
-        if (! $this->image) {
-            return null;
-        }
-
-        return str_starts_with($this->image, 'http')
-            ? $this->image
-            : asset('storage/' . ltrim($this->image, '/'));
     }
 
     public function scopeOrdered(Builder $query): Builder

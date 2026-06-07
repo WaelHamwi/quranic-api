@@ -11,7 +11,7 @@ class AdhkarCategory extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['name', 'slug', 'day_number', 'display_order', 'is_active'];
+    protected $fillable = ['name', 'slug', 'icon', 'day_number', 'display_order', 'is_active'];
 
     public array $translatable = ['name'];
 
@@ -22,6 +22,18 @@ class AdhkarCategory extends Model
             'display_order' => 'integer',
             'is_active'     => 'boolean',
         ];
+    }
+
+    /** Absolute URL to the uploaded icon (SVG/PNG), or null when none is set. */
+    public function iconUrl(): ?string
+    {
+        if (! $this->icon || ! str_contains($this->icon, '/')) {
+            return null;
+        }
+
+        return str_starts_with($this->icon, 'http')
+            ? $this->icon
+            : asset('storage/' . ltrim($this->icon, '/'));
     }
 
     public function sections(): HasMany

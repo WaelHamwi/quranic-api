@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Filament\Resources\Subcategories\Tables;
+
+use App\Models\Category;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+
+class SubcategoriesTable
+{
+    public static function getColumns(): array
+    {
+        return [
+            ImageColumn::make('icon')->label('Icon')->disk('public'),
+            TextColumn::make('name')->label('Name')->searchable(),
+            TextColumn::make('category.name')->label('Category'),
+            TextColumn::make('slug')->searchable(),
+            TextColumn::make('diseases_count')->counts('diseases')->label('Diseases'),
+            TextColumn::make('display_order')->sortable(),
+            IconColumn::make('is_active')->boolean(),
+        ];
+    }
+
+    public static function getFilters(): array
+    {
+        return [
+            SelectFilter::make('category_id')
+                ->label('Category')
+                ->options(fn () => Category::ordered()->get()->pluck('name', 'id')),
+            SelectFilter::make('is_active')->options(['1' => 'Active', '0' => 'Inactive']),
+        ];
+    }
+
+    public static function getActions(): array
+    {
+        return [
+            EditAction::make(),
+            DeleteAction::make(),
+        ];
+    }
+
+    public static function getBulkActions(): array
+    {
+        return [
+            BulkActionGroup::make([DeleteBulkAction::make()]),
+        ];
+    }
+}

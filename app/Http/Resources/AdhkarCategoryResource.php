@@ -12,6 +12,7 @@ class AdhkarCategoryResource extends JsonResource
             'id'            => $this->id,
             'name'          => $this->getTranslations('name'),
             'slug'          => $this->slug,
+            'icon'          => $this->iconUrl(),
             'day_number'    => $this->day_number,
             'display_order' => $this->display_order,
             'items_count'   => $this->whenCounted('items'),

@@ -23,6 +23,19 @@ class TahsinatCategory extends Model
         ];
     }
 
+    /** Absolute URL to the uploaded icon (SVG/PNG), or null when none is set.
+     *  Legacy Ionicons names (no path separator) are treated as "no image". */
+    public function iconUrl(): ?string
+    {
+        if (! $this->icon || ! str_contains($this->icon, '/')) {
+            return null;
+        }
+
+        return str_starts_with($this->icon, 'http')
+            ? $this->icon
+            : asset('storage/' . ltrim($this->icon, '/'));
+    }
+
     public function sections(): HasMany
     {
         return $this->hasMany(TahsinatSection::class);

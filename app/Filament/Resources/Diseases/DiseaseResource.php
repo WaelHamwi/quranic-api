@@ -3,25 +3,12 @@
 namespace App\Filament\Resources\Diseases;
 
 use App\Filament\Resources\Diseases\Pages\ManageDiseases;
+use App\Filament\Resources\Diseases\Schemas\DiseaseForm;
+use App\Filament\Resources\Diseases\Tables\DiseasesTable;
 use App\Models\Disease;
-use App\Models\Subcategory;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Select;
-use Filament\Schemas\Components\Utilities\Set;
-use Illuminate\Support\Str;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\ImageColumn;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use UnitEnum;
 
@@ -37,59 +24,17 @@ class DiseaseResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components([
-            Select::make('subcategory_id')
-                ->label('Subcategory')
-                ->options(fn () => Subcategory::doesntHave('recordings')->ordered()->get()->pluck('name', 'id'))
-                ->searchable()
-                ->required()
-                ->helperText('Only subcategories without directly-attached recordings can have diseases.'),
-            TextInput::make('name.ar')->label('Name (Arabic)')->required()->maxLength(255),
-            TextInput::make('name.en')
-                ->label('Name (English)')
-                ->required()
-                ->maxLength(255)
-                ->live(onBlur: true)
-                ->afterStateUpdated(fn (Set $set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
-            FileUpload::make('icon')
-                ->label('Icon')
-                ->image()
-                ->acceptedFileTypes(['image/png', 'image/svg+xml'])
-                ->maxSize(500)
-                ->disk('public')
-                ->directory('diseases')
-                ->helperText('PNG or SVG, max 500 KB.'),
-            TextInput::make('display_order')->numeric()->default(0),
-            Toggle::make('is_active')->default(true),
-        ]);
+        return $schema->components(DiseaseForm::getSchema());
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->columns([
-                ImageColumn::make('icon')->label('Icon')->disk('public'),
-                TextColumn::make('name')->label('Name')->searchable(),
-                TextColumn::make('subcategory.name')->label('Subcategory'),
-                TextColumn::make('slug')->searchable(),
-                TextColumn::make('recordings_count')->counts('recordings')->label('Recordings'),
-                TextColumn::make('display_order')->sortable(),
-                IconColumn::make('is_active')->boolean(),
-            ])
-            ->defaultSort('display_order')
-            ->filters([
-                SelectFilter::make('subcategory_id')
-                    ->label('Subcategory')
-                    ->options(fn () => Subcategory::ordered()->get()->pluck('name', 'id')),
-                SelectFilter::make('is_active')->options(['1' => 'Active', '0' => 'Inactive']),
-            ])
-            ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([DeleteBulkAction::make()]),
-            ]);
+            ->columns(DiseasesTable::getColumns())
+            ->filters(DiseasesTable::getFilters())
+            ->actions(DiseasesTable::getActions())
+            ->bulkActions(DiseasesTable::getBulkActions())
+            ->defaultSort('display_order');
     }
 
     public static function getPages(): array

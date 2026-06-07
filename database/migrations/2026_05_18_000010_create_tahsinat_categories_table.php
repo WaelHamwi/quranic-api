@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->json('name');
             $table->string('slug')->unique();
-            $table->string('icon')->default('shield-checkmark-outline');
+            $table->string('icon')->nullable();
             $table->unsignedInteger('display_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
