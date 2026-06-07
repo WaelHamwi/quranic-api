@@ -11,7 +11,7 @@ class TahsinatCategory extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['name', 'slug', 'display_order', 'is_active'];
+    protected $fillable = ['name', 'slug', 'icon', 'display_order', 'is_active'];
 
     public array $translatable = ['name'];
 

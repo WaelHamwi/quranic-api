@@ -35,6 +35,8 @@ class TahsinatCategoryResource extends Resource
             TextInput::make('name.en')->label('Name (English)')->required()->maxLength(255),
             TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true)
                 ->helperText('e.g. "self" (Self-Fortification) or "others" (Fortification for Others).'),
+            TextInput::make('icon')->default('shield-checkmark-outline')
+                ->helperText('Ionicons name shown on the mobile card. Examples: shield-checkmark-outline, moon-outline, sunny-outline, leaf-outline, heart-outline, star-outline'),
             TextInput::make('display_order')->numeric()->default(0),
             Toggle::make('is_active')->default(true),
         ]);
@@ -46,6 +48,7 @@ class TahsinatCategoryResource extends Resource
             ->columns([
                 TextColumn::make('name')->label('Name')->searchable(),
                 TextColumn::make('slug')->searchable(),
+                TextColumn::make('icon')->label('Icon'),
                 TextColumn::make('items_count')->counts('items')->label('Items'),
                 IconColumn::make('is_active')->boolean(),
             ])
