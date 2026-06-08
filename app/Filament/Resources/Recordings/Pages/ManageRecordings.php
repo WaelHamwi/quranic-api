@@ -6,7 +6,10 @@ use App\Filament\Resources\Recordings\RecordingResource;
 use App\Jobs\CompressAudioJob;
 use App\Models\Recording;
 use Filament\Actions\CreateAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ManageRecords;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class ManageRecordings extends ManageRecords
 {
@@ -22,5 +25,25 @@ class ManageRecordings extends ManageRecords
                     }
                 }),
         ];
+    }
+
+    protected function handleRecordCreation(array $data): Model
+    {
+        try {
+            return parent::handleRecordCreation($data);
+        } catch (\LogicException $e) {
+            Notification::make()->title($e->getMessage())->danger()->send();
+            throw ValidationException::withMessages(['_' => $e->getMessage()]);
+        }
+    }
+
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        try {
+            return parent::handleRecordUpdate($record, $data);
+        } catch (\LogicException $e) {
+            Notification::make()->title($e->getMessage())->danger()->send();
+            throw ValidationException::withMessages(['_' => $e->getMessage()]);
+        }
     }
 }

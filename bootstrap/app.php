@@ -35,5 +35,12 @@ return Application::configure(basePath: dirname(__DIR__))
     })
 
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->renderable(function (\LogicException $e, \Illuminate\Http\Request $request) {
+            if ($request->hasHeader('X-Livewire')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'errors'  => ['_logic' => [$e->getMessage()]],
+                ], 422);
+            }
+        });
     })->create();

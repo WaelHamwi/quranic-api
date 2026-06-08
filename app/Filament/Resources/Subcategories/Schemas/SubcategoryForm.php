@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Subcategories\Schemas;
 
+use App\Filament\Support\IconUpload;
 use App\Models\Category;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -17,10 +17,10 @@ class SubcategoryForm
         return [
             Select::make('category_id')
                 ->label('Category')
-                ->options(fn () => Category::doesntHave('recordings')->ordered()->get()->pluck('name', 'id'))
+                ->options(fn () => Category::where('type', 'standard')->ordered()->get()->pluck('name', 'id'))
                 ->searchable()
                 ->required()
-                ->helperText('Only categories without directly-attached recordings can have subcategories.'),
+                ->helperText('Only standard-type categories can have subcategories.'),
             TextInput::make('name.ar')->label('Name (Arabic)')->required()->maxLength(255),
             TextInput::make('name.en')
                 ->label('Name (English)')
@@ -28,14 +28,7 @@ class SubcategoryForm
                 ->maxLength(255)
                 ->live(onBlur: true)
                 ->afterStateUpdated(fn (Set $set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
-            FileUpload::make('icon')
-                ->label('Icon')
-                ->image()
-                ->acceptedFileTypes(['image/png', 'image/svg+xml'])
-                ->maxSize(500)
-                ->disk('public')
-                ->directory('subcategories')
-                ->helperText('PNG or SVG, max 500 KB.'),
+            ...IconUpload::make('subcategories'),
             TextInput::make('display_order')->numeric()->default(0),
             Toggle::make('is_active')->default(true),
         ];

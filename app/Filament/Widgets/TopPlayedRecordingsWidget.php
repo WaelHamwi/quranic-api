@@ -35,10 +35,11 @@ class TopPlayedRecordingsWidget extends ChartWidget
             ->get();
 
         $labels = $recordings->map(function ($recording) {
-            $title = $recording->getTranslation('title', 'en')
-                ?: 'Session ' . $recording->session_number;
+            $context = $recording->disease
+                ? Str::limit($recording->disease->getTranslation('name', 'en'), 12)
+                : 'General';
 
-            return Str::limit($title, 22);
+            return $context . ' · S' . $recording->session_number;
         })->toArray();
 
         $counts = $recordings->pluck('plays_count')->toArray();

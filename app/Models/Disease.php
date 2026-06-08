@@ -16,7 +16,7 @@ class Disease extends Model
     use HasTranslations, SoftDeletes;
 
     protected $fillable = [
-        'subcategory_id', 'name', 'slug', 'icon',
+        'subcategory_id', 'category_id', 'name', 'slug', 'icon',
         'display_order', 'is_active',
     ];
 
@@ -26,6 +26,32 @@ class Disease extends Model
         static::updating(function (self $r): void {
             if ($r->isDirty('name')) {
                 static::assignSlug($r);
+            }
+        });
+        static::saving(function (self $r): void {
+            $hasSub = ! empty($r->subcategory_id);
+            $hasCat = ! empty($r->category_id);
+
+            if ($hasSub && $hasCat) {
+                throw new \LogicException('A disease cannot belong to both a subcategory and a direct category.');
+            }
+            if (! $hasSub && ! $hasCat) {
+                throw new \LogicException('A disease must belong to either a subcategory or a direct category.');
+            }
+            if ($hasSub) {
+                $sub = Subcategory::find($r->subcategory_id);
+                if ($sub && $sub->recordings()->exists()) {
+                    throw new \LogicException('Cannot assign a disease to a subcategory that already has direct recordings.');
+                }
+            }
+            if ($hasCat) {
+                $cat = Category::find($r->category_id);
+                if ($cat && ! $cat->isDiseaseDirect()) {
+                    throw new \LogicException('The selected category does not accept direct diseases (must be type disease_direct).');
+                }
+                if ($cat && $cat->subcategories()->exists()) {
+                    throw new \LogicException('Cannot assign a disease directly to a category that already has subcategories.');
+                }
             }
         });
     }
@@ -61,6 +87,7 @@ class Disease extends Model
     {
         return [
             'subcategory_id' => 'integer',
+            'category_id'    => 'integer',
             'display_order'  => 'integer',
             'is_active'      => 'boolean',
         ];
@@ -71,7 +98,11 @@ class Disease extends Model
         return $this->belongsTo(Subcategory::class);
     }
 
-    /** Absolute URL to the uploaded icon (SVG/PNG), or null when none is set. */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
     public function iconUrl(): ?string
     {
         if (! $this->icon) {

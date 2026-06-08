@@ -19,8 +19,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Authenticated users are keyed by user ID (generous: supports 30 s polling from multiple screens).
+        // Unauthenticated requests are keyed by IP with a tighter cap.
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return $request->user()
+                ? Limit::perMinute(120)->by('u:' . $request->user()->id)
+                : Limit::perMinute(30)->by($request->ip());
+        });
+
+        // Strict per-IP limit for login / register to prevent brute-force.
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
         });
 
         // Write operations on all content are admin-only; reads stay public.

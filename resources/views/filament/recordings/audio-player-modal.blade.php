@@ -4,6 +4,6 @@
         Your browser does not support the audio element.
     </audio>
     <div class="mt-4 text-center text-gray-600">
-        {{ $title }} &mdash; Session {{ $sessionNumber }}
+        Session {{ $sessionNumber }}
     </div>
 </div>

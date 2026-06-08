@@ -13,11 +13,11 @@ class Recording extends Model
     use HasTranslations, SoftDeletes;
 
     protected $fillable = [
-        'disease_id', 'category_id', 'subcategory_id', 'session_number', 'title', 'description',
-        'audio_path', 'duration_seconds', 'is_free', 'is_general', 'plays_count', 'created_by',
+        'disease_id', 'category_id', 'subcategory_id', 'session_number', 'description',
+        'segments', 'audio_path', 'duration_seconds', 'is_free', 'is_general', 'plays_count', 'created_by',
     ];
 
-    public array $translatable = ['title', 'description'];
+    public array $translatable = ['description'];
 
     protected function casts(): array
     {
@@ -31,11 +31,21 @@ class Recording extends Model
             'is_general'       => 'boolean',
             'plays_count'      => 'integer',
             'created_by'       => 'integer',
+            'segments'         => 'array',
         ];
     }
 
     protected static function booted(): void
     {
+        static::saving(function (self $r): void {
+            if (! empty($r->subcategory_id)) {
+                $sub = Subcategory::find($r->subcategory_id);
+                if ($sub && $sub->diseases()->exists()) {
+                    throw new \LogicException('Cannot assign a recording directly to a subcategory that already has diseases.');
+                }
+            }
+        });
+
         static::creating(function (Recording $recording) {
             if (! $recording->session_number) {
                 // Scope session numbering to the parent (category, subcategory or disease).

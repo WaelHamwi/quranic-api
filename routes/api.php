@@ -20,12 +20,14 @@ use App\Http\Controllers\Api\SponsorController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\TahsinatController;
 
-Route::post('/auth/google/callback', [GoogleAuthController::class, 'handleMobileGoogleCallback']);
-
-Route::middleware(['throttle:api'])->group(function () {
-    // ── Auth ──────────────────────────────────────────────────────
+// ── Auth credential routes — strict per-IP brute-force protection ─────────────
+Route::middleware(['throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/auth/google/callback', [GoogleAuthController::class, 'handleMobileGoogleCallback']);
+});
+
+Route::middleware(['throttle:api'])->group(function () {
 
     // ── Mushaf (Quran) ────────────────────────────────────────────
     Route::get('/surahs', [SurahController::class, 'index']);

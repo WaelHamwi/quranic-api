@@ -23,6 +23,20 @@ class CategorySeeder extends Seeder
 
         $data = [
             [
+                'name'           => ['ar' => 'رقية شاملة', 'en' => 'General Ruqyah'],
+                'slug'           => 'general-ruqyah-category',
+                'icon'           => null,
+                'type'           => 'disease_direct',
+                'direct_diseases' => [
+                    [
+                        'name'    => ['ar' => 'رقية عامة', 'en' => 'General Ruqyah Disease'],
+                        'slug'    => 'general-ruqyah-disease',
+                        'aliases' => [],
+                        'general_recording_sessions' => [1],
+                    ],
+                ],
+            ],
+            [
                 'name' => ['ar' => 'الأمراض الروحية', 'en' => 'Spiritual Afflictions'],
                 'slug' => 'spiritual-afflictions',
                 'icon' => 'heroicon-o-sparkles',
@@ -85,11 +99,38 @@ class CategorySeeder extends Seeder
                 'name'          => $catData['name'],
                 'slug'          => $catData['slug'],
                 'icon'          => $catData['icon'],
+                'type'          => $catData['type'] ?? 'standard',
                 'display_order' => $catIndex,
                 'is_active'     => true,
             ]);
 
-            foreach ($catData['subcategories'] as $subIndex => $subData) {
+            foreach (($catData['direct_diseases'] ?? []) as $disIndex => $disData) {
+                $disease = Disease::create([
+                    'category_id'   => $category->id,
+                    'name'          => $disData['name'],
+                    'slug'          => $disData['slug'],
+                    'display_order' => $disIndex,
+                    'is_active'     => true,
+                ]);
+
+                foreach ($disData['aliases'] as $alias) {
+                    DiseaseAlias::create(['disease_id' => $disease->id, 'alias' => $alias]);
+                }
+
+                for ($session = 1; $session <= 3; $session++) {
+                    Recording::create([
+                        'disease_id'       => $disease->id,
+                        'session_number'   => $session,
+                        'is_free'          => $session === 1,
+                        'audio_path'       => self::SAMPLE_AUDIO . '/' . str_pad((string) $session, 3, '0', STR_PAD_LEFT) . '.mp3',
+                        'duration_seconds' => 300,
+                        'is_general'       => \in_array($session, $disData['general_recording_sessions']),
+                        'plays_count'      => 0,
+                    ]);
+                }
+            }
+
+            foreach (($catData['subcategories'] ?? []) as $subIndex => $subData) {
                 $subcategory = Subcategory::create([
                     'category_id'   => $category->id,
                     'name'          => $subData['name'],
@@ -118,7 +159,7 @@ class CategorySeeder extends Seeder
                             'is_free'          => $session === 1,
                             'audio_path'       => self::SAMPLE_AUDIO . '/' . str_pad((string) $session, 3, '0', STR_PAD_LEFT) . '.mp3',
                             'duration_seconds' => 300,
-                            'is_general'       => in_array($session, $disData['general_recording_sessions']),
+                            'is_general'       => \in_array($session, $disData['general_recording_sessions']),
                             'plays_count'      => 0,
                         ]);
                     }

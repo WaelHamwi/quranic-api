@@ -14,8 +14,8 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable()->constrained('categories')->cascadeOnDelete();
             $table->foreignId('subcategory_id')->nullable()->constrained('subcategories')->cascadeOnDelete();
             $table->unsignedSmallInteger('session_number')->default(1);
-            $table->json('title')->nullable();
             $table->json('description')->nullable();
+            $table->json('segments')->nullable();
             $table->string('audio_path', 500)->nullable();
             $table->unsignedInteger('duration_seconds')->nullable();
             $table->boolean('is_free')->default(false);

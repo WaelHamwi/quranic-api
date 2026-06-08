@@ -22,6 +22,18 @@ class Category extends Model
             if ($r->isDirty('name')) {
                 static::assignSlug($r);
             }
+            if ($r->isDirty('type')) {
+                $new = $r->type;
+                if ($new === 'standard' && $r->directDiseases()->exists()) {
+                    throw new \LogicException('Cannot change to standard: category has direct diseases.');
+                }
+                if ($new === 'disease_direct' && $r->subcategories()->exists()) {
+                    throw new \LogicException('Cannot change to disease_direct: category has subcategories.');
+                }
+                if ($new === 'direct' && ($r->subcategories()->exists() || $r->directDiseases()->exists())) {
+                    throw new \LogicException('Cannot change to direct: remove subcategories and direct diseases first.');
+                }
+            }
         });
     }
 
@@ -65,10 +77,14 @@ class Category extends Model
         return $this->hasMany(Subcategory::class);
     }
 
-    /** Recordings attached directly to this category (type = 'direct'). */
     public function recordings(): HasMany
     {
         return $this->hasMany(Recording::class);
+    }
+
+    public function directDiseases(): HasMany
+    {
+        return $this->hasMany(Disease::class, 'category_id');
     }
 
     public function isDirect(): bool
@@ -76,7 +92,11 @@ class Category extends Model
         return $this->type === 'direct';
     }
 
-    /** Absolute URL to the uploaded icon (SVG/PNG). Legacy heroicon names → null. */
+    public function isDiseaseDirect(): bool
+    {
+        return $this->type === 'disease_direct';
+    }
+
     public function iconUrl(): ?string
     {
         if (! $this->icon || str_starts_with($this->icon, 'heroicon')) {

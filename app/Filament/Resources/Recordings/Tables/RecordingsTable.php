@@ -12,16 +12,17 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Model;
 
 class RecordingsTable
 {
     public static function getColumns(): array
     {
         return [
-            TextColumn::make('title')->label('Title')->searchable(),
             TextColumn::make('disease.name')->label('Disease')->placeholder('—'),
             TextColumn::make('subcategory.name')->label('Subcategory')->placeholder('—'),
             TextColumn::make('category.name')->label('Category')->placeholder('—'),
@@ -60,15 +61,26 @@ class RecordingsTable
                 ->modalContent(function ($record) {
                     return view('filament.recordings.audio-player-modal', [
                         'audioUrl'      => $record->streamUrl(),
-                        'title'         => $record->title,
                         'sessionNumber' => $record->session_number,
                     ]);
                 })
-                ->modalHeading(fn ($record) => $record->title)
+                ->modalHeading(fn ($record) => "Session {$record->session_number}")
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close'),
             EditAction::make()
-                ->after(function (Recording $record): void {
+                ->action(function (EditAction $action, Model $record, array $data): void {
+                    try {
+                        $record->fill($data);
+                        $record->save();
+                    } catch (\LogicException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->danger()
+                            ->send();
+                        $action->halt();
+                        return;
+                    }
+
                     if ($record->audio_path && ! str_starts_with($record->audio_path, 'http')) {
                         CompressAudioJob::dispatch(Recording::class, $record->id, $record->audio_path);
                     }

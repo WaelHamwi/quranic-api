@@ -18,7 +18,13 @@ class Subcategory extends Model
 
     protected static function booted(): void
     {
-        static::creating(fn (self $r) => static::assignSlug($r));
+        static::creating(function (self $r): void {
+            static::assignSlug($r);
+            $cat = Category::find($r->category_id);
+            if ($cat && ! ($cat->type === 'standard')) {
+                throw new \LogicException('Cannot add a subcategory to a category that is not type standard.');
+            }
+        });
         static::updating(function (self $r): void {
             if ($r->isDirty('name')) {
                 static::assignSlug($r);

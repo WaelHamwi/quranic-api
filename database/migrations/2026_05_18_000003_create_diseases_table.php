@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('diseases', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('subcategory_id')->constrained('subcategories')->cascadeOnDelete();
+            $table->foreignId('subcategory_id')->nullable()->constrained('subcategories')->nullOnDelete();
+            $table->foreignId('category_id')->nullable()->constrained('categories')->cascadeOnDelete();
             $table->json('name');
             $table->string('slug')->unique();
             $table->string('icon')->nullable();

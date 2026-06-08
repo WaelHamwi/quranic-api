@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Disease;
 use App\Models\Subcategory;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -17,9 +18,6 @@ class RecordingForm
     public static function getSchema(): array
     {
         return [
-            // A recording attaches to exactly ONE level (the leaf): a disease,
-            // a subcategory (with no diseases), or a category (with no
-            // subcategories). Picking one disables the other two.
             Select::make('disease_id')
                 ->label('Disease')
                 ->options(fn () => Disease::ordered()->get()->pluck('name', 'id'))
@@ -38,27 +36,55 @@ class RecordingForm
                 ->helperText('Only subcategories that have no diseases can hold recordings directly.'),
             Select::make('category_id')
                 ->label('Category (without subcategories)')
-                ->options(fn () => Category::doesntHave('subcategories')->ordered()->get()->pluck('name', 'id'))
+                ->options(fn () => Category::where('type', 'direct')->ordered()->get()->pluck('name', 'id'))
                 ->searchable()
                 ->nullable()
                 ->live()
                 ->disabled(fn (Get $get) => filled($get('disease_id')) || filled($get('subcategory_id')))
-                ->helperText('Only categories that have no subcategories can hold recordings directly.'),
-            TextInput::make('title.ar')->label('Title (Arabic)')->maxLength(255),
-            TextInput::make('title.en')->label('Title (English)')->maxLength(255),
+                ->helperText('Only direct-type categories can hold recordings directly.'),
             Textarea::make('description.ar')->label('Description (Arabic)')->rows(4),
             Textarea::make('description.en')->label('Description (English)')->rows(4),
+            Repeater::make('segments')
+                ->label('Timed Segments (Karaoke)')
+                ->helperText('Each segment maps a time range (in seconds) to the Arabic / English text displayed during playback.')
+                ->schema([
+                    TextInput::make('start')
+                        ->label('Start (s)')
+                        ->numeric()
+                        ->step(0.1)
+                        ->minValue(0)
+                        ->required(),
+                    TextInput::make('end')
+                        ->label('End (s)')
+                        ->numeric()
+                        ->step(0.1)
+                        ->minValue(0)
+                        ->required(),
+                    Textarea::make('text_ar')
+                        ->label('Arabic Text')
+                        ->rows(2)
+                        ->required(),
+                    Textarea::make('text_en')
+                        ->label('English Text')
+                        ->rows(2),
+                ])
+                ->columns(2)
+                ->defaultItems(0)
+                ->reorderable()
+                ->collapsible()
+                ->itemLabel(fn (array $state): string => sprintf(
+                    '%.1fs – %.1fs  %s',
+                    (float) ($state['start'] ?? 0),
+                    (float) ($state['end'] ?? 0),
+                    mb_substr($state['text_ar'] ?? '', 0, 40),
+                )),
             FileUpload::make('audio_path')
                 ->label('Recording File')
                 ->disk('public')
                 ->directory('recordings')
-                ->acceptedFileTypes([
-                    'audio/mpeg', 'audio/mp3', 'audio/x-mpeg', 'audio/x-mp3',
-                    'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/x-wav',
-                    'audio/webm', 'video/mp4',
-                ])
+                ->acceptedFileTypes(['audio/*', 'video/mp4'])
                 ->maxSize(204800)
-                ->helperText('Accepted: mp3, mp4, ogg, wav (max 200 MB).'),
+                ->helperText('Accepted: any audio format — mp3, m4a, aac, ogg, opus, wav, webm (max 200 MB).'),
             TextInput::make('duration_seconds')->numeric()->minValue(0),
             Toggle::make('is_free')
                 ->label('Free Session')
