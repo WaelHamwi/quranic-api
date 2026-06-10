@@ -149,6 +149,72 @@ class GoogleAuthController extends Controller
         }
     }
 
+    public function handleGoogleMobileWebCallback(Request $request)
+    {
+        $stateRaw = $request->query('state', '');
+        $returnTo = base64_decode(strtr($stateRaw, '-_', '+/') . str_repeat('=', strlen($stateRaw) % 4));
+
+        try {
+            $googleUser = Socialite::driver('google')
+                ->stateless()
+                ->redirectUrl(config('services.google.mobile_redirect'))
+                ->user();
+        } catch (\Exception $e) {
+            return redirect($returnTo . '?status=error&message=' . urlencode($e->getMessage()));
+        }
+
+        // Existing Google account — log in directly.
+        $oauthProvider = OAuthProvider::where('provider', 'google')
+            ->where('provider_user_id', $googleUser->getId())
+            ->first();
+
+        if ($oauthProvider) {
+            $user = $oauthProvider->user;
+            $token = $user->createToken('mobile-app')->plainTextToken;
+            return $this->redirectToApp($returnTo, 'success', $user, $token);
+        }
+
+        // Email registered via another method — link and log in.
+        $existingUser = User::where('email', $googleUser->getEmail())->first();
+        if ($existingUser) {
+            $existingUser->oauthProviders()->create([
+                'provider'         => 'google',
+                'provider_user_id' => $googleUser->getId(),
+                'provider_token'   => $googleUser->token,
+            ]);
+            $token = $existingUser->createToken('mobile-app')->plainTextToken;
+            return $this->redirectToApp($returnTo, 'success', $existingUser, $token);
+        }
+
+        // Brand-new user — send OTP, redirect app to verification screen.
+        $otp   = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $email = $googleUser->getEmail();
+
+        Cache::put("otp:{$email}", [
+            'otp'            => Hash::make($otp),
+            'google_sub'     => $googleUser->getId(),
+            'google_token'   => $googleUser->token,
+            'name'           => $googleUser->getName() ?? 'User',
+            'email_verified' => true,
+        ], 600);
+
+        Mail::to($email)->send(new OtpVerificationMail($otp));
+
+        return redirect($returnTo . '?' . http_build_query([
+            'status' => 'verification_required',
+            'email'  => $email,
+        ]));
+    }
+
+    private function redirectToApp(string $returnTo, string $status, $user, string $token): \Illuminate\Http\RedirectResponse
+    {
+        return redirect($returnTo . '?' . http_build_query([
+            'status' => $status,
+            'token'  => $token,
+            'user'   => json_encode($user->only(['id', 'name', 'email'])),
+        ]));
+    }
+
     public function verifyOtp(Request $request)
     {
         $request->validate([
