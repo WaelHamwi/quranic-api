@@ -32,6 +32,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->ip());
         });
 
+        // OTP verify / resend — 10 per minute per IP.
+        RateLimiter::for('otp', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip());
+        });
+
         // Write operations on all content are admin-only; reads stay public.
         $contentModels = [
             \App\Models\Category::class,

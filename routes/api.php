@@ -27,6 +27,12 @@ Route::middleware(['throttle:auth'])->group(function () {
     Route::post('/auth/google/callback', [GoogleAuthController::class, 'handleMobileGoogleCallback']);
 });
 
+// ── OTP verification — separate throttle ──────────────────────────────────────
+Route::middleware(['throttle:otp'])->group(function () {
+    Route::post('/auth/verify-otp', [GoogleAuthController::class, 'verifyOtp']);
+    Route::post('/auth/resend-otp', [GoogleAuthController::class, 'resendOtp']);
+});
+
 Route::middleware(['throttle:api'])->group(function () {
 
     // ── Mushaf (Quran) ────────────────────────────────────────────
