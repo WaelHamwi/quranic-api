@@ -66,15 +66,35 @@ class GoogleAuthController extends Controller
 
     public function handleMobileGoogleCallback(Request $request)
     {
-        $request->validate(['access_token' => 'required|string']);
+        $request->validate([
+            'code'           => 'required|string',
+            'code_verifier'  => 'required|string',
+        ]);
 
         try {
             $client = new \GuzzleHttp\Client(['verify' => false]);
-            $response = $client->get('https://www.googleapis.com/oauth2/v3/userinfo', [
-                'headers' => ['Authorization' => 'Bearer ' . $request->input('access_token')],
+
+            // Exchange PKCE authorization code for tokens server-side.
+            $tokenResponse = $client->post('https://oauth2.googleapis.com/token', [
+                'form_params' => [
+                    'code'          => $request->input('code'),
+                    'client_id'     => config('services.google.client_id'),
+                    'client_secret' => config('services.google.client_secret'),
+                    'redirect_uri'  => config('services.google.redirect'),
+                    'grant_type'    => 'authorization_code',
+                    'code_verifier' => $request->input('code_verifier'),
+                ],
             ]);
 
-            $googleUser = json_decode($response->getBody(), true);
+            $tokens      = json_decode($tokenResponse->getBody(), true);
+            $accessToken = $tokens['access_token'];
+
+            // Fetch user profile.
+            $userInfoResponse = $client->get('https://www.googleapis.com/oauth2/v3/userinfo', [
+                'headers' => ['Authorization' => 'Bearer ' . $accessToken],
+            ]);
+
+            $googleUser = json_decode($userInfoResponse->getBody(), true);
 
             // Existing Google account — log in directly.
             $oauthProvider = OAuthProvider::where('provider', 'google')
@@ -82,7 +102,7 @@ class GoogleAuthController extends Controller
                 ->first();
 
             if ($oauthProvider) {
-                $oauthProvider->update(['provider_token' => $request->input('access_token')]);
+                $oauthProvider->update(['provider_token' => $accessToken]);
                 $user = $oauthProvider->user;
                 return response()->json([
                     'status' => 'success',
@@ -97,7 +117,7 @@ class GoogleAuthController extends Controller
                 $existingUser->oauthProviders()->create([
                     'provider'         => 'google',
                     'provider_user_id' => $googleUser['sub'],
-                    'provider_token'   => $request->input('access_token'),
+                    'provider_token'   => $accessToken,
                 ]);
                 return response()->json([
                     'status' => 'success',
@@ -113,7 +133,7 @@ class GoogleAuthController extends Controller
             Cache::put("otp:{$email}", [
                 'otp'            => Hash::make($otp),
                 'google_sub'     => $googleUser['sub'],
-                'google_token'   => $request->input('access_token'),
+                'google_token'   => $accessToken,
                 'name'           => $googleUser['name'] ?? $googleUser['given_name'] ?? 'User',
                 'email_verified' => $googleUser['email_verified'] ?? false,
             ], 600);
