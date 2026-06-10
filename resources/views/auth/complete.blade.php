@@ -18,16 +18,23 @@
         @if($status === 'success')
             <div class="icon">✅</div>
             <h2>Sign-in Successful</h2>
-            <p>You can close this window and return to the app.</p>
+            <p>Returning to app…</p>
         @elseif($status === 'verification_required')
             <div class="icon">📧</div>
             <h2>Check Your Email</h2>
-            <p>A verification code has been sent to your email. Close this window and enter the code in the app.</p>
+            <p>A verification code has been sent. Returning to app…</p>
         @else
             <div class="icon">❌</div>
             <h2>Authentication Failed</h2>
-            <p>Something went wrong. Please close this window and try again.</p>
+            <p>Something went wrong. Please try again.</p>
         @endif
     </div>
+    <script>
+        // Redirect to the app's custom scheme so WebBrowser.openAuthSessionAsync detects
+        // the callback and closes the browser automatically.
+        setTimeout(function () {
+            window.location.href = 'quranicclinic://auth-callback?status={{ $status }}';
+        }, 400);
+    </script>
 </body>
 </html>
