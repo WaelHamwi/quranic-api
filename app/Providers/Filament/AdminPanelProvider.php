@@ -35,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->profile(EditProfile::class, isSimple: false)
 
             // ── Branding ──────────────────────────────────────────────
-            ->brandName('القرآن الكريم')
+            ->brandName('المشفى القرآني')
 
             // ── Color palette (Islamic green / teal family) ───────────
             ->colors([
