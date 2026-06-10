@@ -19,16 +19,17 @@ class GoogleAuthController extends Controller
 {
     public function redirectToGoogle()
     {
-        /** @var \Laravel\Socialite\Two\GoogleProvider $provider */
         $provider = Socialite::driver('google');
+        assert($provider instanceof \Laravel\Socialite\Two\AbstractProvider);
         return $provider->stateless()->redirect();
     }
 
     public function handleGoogleCallback()
     {
-        /** @var \Laravel\Socialite\Two\GoogleProvider $provider */
         $provider = Socialite::driver('google');
+        assert($provider instanceof \Laravel\Socialite\Two\AbstractProvider);
         $googleUser = $provider->stateless()->user();
+        assert($googleUser instanceof \Laravel\Socialite\Two\User);
 
         DB::beginTransaction();
         try {
@@ -156,10 +157,13 @@ class GoogleAuthController extends Controller
         $cacheKey     = "auth_session:{$sessionToken}";
 
         try {
-            $googleUser = Socialite::driver('google')
+            $driver = Socialite::driver('google');
+            assert($driver instanceof \Laravel\Socialite\Two\AbstractProvider);
+            $googleUser = $driver
                 ->stateless()
                 ->redirectUrl(config('services.google.mobile_redirect'))
                 ->user();
+            assert($googleUser instanceof \Laravel\Socialite\Two\User);
         } catch (\Exception $e) {
             Cache::put($cacheKey, ['status' => 'error', 'message' => $e->getMessage()], 300);
             return view('auth.complete', ['status' => 'error']);
@@ -198,26 +202,38 @@ class GoogleAuthController extends Controller
             return view('auth.complete', ['status' => 'success']);
         }
 
-        // Brand-new user — send OTP, app will show verification screen.
-        $otp   = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $email = $googleUser->getEmail();
+        // Brand-new user — Google already verified the email, create account directly.
+        DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name'              => $googleUser->getName() ?? 'User',
+                'email'             => $googleUser->getEmail(),
+                'email_verified_at' => now(),
+                'password'          => bcrypt(Str::random(32)),
+            ]);
 
-        Cache::put("otp:{$email}", [
-            'otp'            => Hash::make($otp),
-            'google_sub'     => $googleUser->getId(),
-            'google_token'   => $googleUser->token,
-            'name'           => $googleUser->getName() ?? 'User',
-            'email_verified' => true,
-        ], 600);
+            $user->oauthProviders()->create([
+                'provider'         => 'google',
+                'provider_user_id' => $googleUser->getId(),
+                'provider_token'   => $googleUser->token,
+            ]);
 
-        Mail::to($email)->send(new OtpVerificationMail($otp));
+            $user->assignRole('user');
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Cache::put($cacheKey, ['status' => 'error', 'message' => $e->getMessage()], 300);
+            return view('auth.complete', ['status' => 'error']);
+        }
 
+        $token = $user->createToken('mobile-app')->plainTextToken;
         Cache::put($cacheKey, [
-            'status' => 'verification_required',
-            'email'  => $email,
+            'status' => 'success',
+            'token'  => $token,
+            'user'   => $user->only(['id', 'name', 'email']),
         ], 300);
 
-        return view('auth.complete', ['status' => 'verification_required']);
+        return view('auth.complete', ['status' => 'success']);
     }
 
     public function getSessionResult(Request $request, string $token)
