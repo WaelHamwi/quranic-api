@@ -33,6 +33,9 @@ Route::middleware(['throttle:otp'])->group(function () {
     Route::post('/auth/resend-otp', [GoogleAuthController::class, 'resendOtp']);
 });
 
+// ── OAuth session result polling ───────────────────────────────────────────────
+Route::get('/auth/session/{token}', [GoogleAuthController::class, 'getSessionResult']);
+
 Route::middleware(['throttle:api'])->group(function () {
 
     // ── Mushaf (Quran) ────────────────────────────────────────────

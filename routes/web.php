@@ -9,11 +9,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// ── Mobile Google OAuth — server-side flow ─────────────────────────────────
-// Step 1: mobile app opens this URL; we redirect to Google with returnTo in state.
+// ── Mobile Google OAuth — session-polling flow ─────────────────────────────
+// Step 1: mobile app opens this URL in a browser; we redirect to Google with session_token in state.
 Route::get('/auth/google/mobile', function (Request $request) {
-    $returnTo = $request->query('returnTo', '');
-    $state    = rtrim(strtr(base64_encode($returnTo), '+/', '-_'), '=');
+    $sessionToken = $request->query('session_token', '');
+    $state        = rtrim(strtr(base64_encode($sessionToken), '+/', '-_'), '=');
 
     return Socialite::driver('google')
         ->stateless()
@@ -23,5 +23,5 @@ Route::get('/auth/google/mobile', function (Request $request) {
         ->redirect();
 });
 
-// Step 2: Google redirects here; we decode state, get the user, redirect to app.
+// Step 2: Google redirects here; we store result in cache and show a "done" page.
 Route::get('/auth/google/mobile/callback', [GoogleAuthController::class, 'handleGoogleMobileWebCallback']);

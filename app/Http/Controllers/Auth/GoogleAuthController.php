@@ -151,8 +151,9 @@ class GoogleAuthController extends Controller
 
     public function handleGoogleMobileWebCallback(Request $request)
     {
-        $stateRaw = $request->query('state', '');
-        $returnTo = base64_decode(strtr($stateRaw, '-_', '+/') . str_repeat('=', strlen($stateRaw) % 4));
+        $stateRaw     = $request->query('state', '');
+        $sessionToken = base64_decode(strtr($stateRaw, '-_', '+/') . str_repeat('=', strlen($stateRaw) % 4));
+        $cacheKey     = "auth_session:{$sessionToken}";
 
         try {
             $googleUser = Socialite::driver('google')
@@ -160,7 +161,8 @@ class GoogleAuthController extends Controller
                 ->redirectUrl(config('services.google.mobile_redirect'))
                 ->user();
         } catch (\Exception $e) {
-            return redirect($returnTo . '?status=error&message=' . urlencode($e->getMessage()));
+            Cache::put($cacheKey, ['status' => 'error', 'message' => $e->getMessage()], 300);
+            return view('auth.complete', ['status' => 'error']);
         }
 
         // Existing Google account — log in directly.
@@ -169,9 +171,14 @@ class GoogleAuthController extends Controller
             ->first();
 
         if ($oauthProvider) {
-            $user = $oauthProvider->user;
+            $user  = $oauthProvider->user;
             $token = $user->createToken('mobile-app')->plainTextToken;
-            return $this->redirectToApp($returnTo, 'success', $user, $token);
+            Cache::put($cacheKey, [
+                'status' => 'success',
+                'token'  => $token,
+                'user'   => $user->only(['id', 'name', 'email']),
+            ], 300);
+            return view('auth.complete', ['status' => 'success']);
         }
 
         // Email registered via another method — link and log in.
@@ -183,10 +190,15 @@ class GoogleAuthController extends Controller
                 'provider_token'   => $googleUser->token,
             ]);
             $token = $existingUser->createToken('mobile-app')->plainTextToken;
-            return $this->redirectToApp($returnTo, 'success', $existingUser, $token);
+            Cache::put($cacheKey, [
+                'status' => 'success',
+                'token'  => $token,
+                'user'   => $existingUser->only(['id', 'name', 'email']),
+            ], 300);
+            return view('auth.complete', ['status' => 'success']);
         }
 
-        // Brand-new user — send OTP, redirect app to verification screen.
+        // Brand-new user — send OTP, app will show verification screen.
         $otp   = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $email = $googleUser->getEmail();
 
@@ -200,19 +212,25 @@ class GoogleAuthController extends Controller
 
         Mail::to($email)->send(new OtpVerificationMail($otp));
 
-        return redirect($returnTo . '?' . http_build_query([
+        Cache::put($cacheKey, [
             'status' => 'verification_required',
             'email'  => $email,
-        ]));
+        ], 300);
+
+        return view('auth.complete', ['status' => 'verification_required']);
     }
 
-    private function redirectToApp(string $returnTo, string $status, $user, string $token): \Illuminate\Http\RedirectResponse
+    public function getSessionResult(Request $request, string $token)
     {
-        return redirect($returnTo . '?' . http_build_query([
-            'status' => $status,
-            'token'  => $token,
-            'user'   => json_encode($user->only(['id', 'name', 'email'])),
-        ]));
+        $cacheKey = "auth_session:{$token}";
+        $result   = Cache::get($cacheKey);
+
+        if (! $result) {
+            return response()->json(['status' => 'pending'], 202);
+        }
+
+        Cache::forget($cacheKey);
+        return response()->json($result);
     }
 
     public function verifyOtp(Request $request)
