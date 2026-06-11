@@ -103,13 +103,16 @@ class GoogleAuthController extends Controller
                 ->first();
 
             if ($oauthProvider) {
-                $oauthProvider->update(['provider_token' => $accessToken]);
                 $user = $oauthProvider->user;
-                return response()->json([
-                    'status' => 'success',
-                    'user'   => $user,
-                    'token'  => $user->createToken('mobile-app')->plainTextToken,
-                ]);
+                if ($user) {
+                    $oauthProvider->update(['provider_token' => $accessToken]);
+                    return response()->json([
+                        'status' => 'success',
+                        'user'   => $user,
+                        'token'  => $user->createToken('mobile-app')->plainTextToken,
+                    ]);
+                }
+                $oauthProvider->delete();
             }
 
             // Email registered via another method — link and log in.
@@ -153,7 +156,7 @@ class GoogleAuthController extends Controller
     public function handleGoogleMobileWebCallback(Request $request)
     {
         $stateRaw     = $request->query('state', '');
-        $sessionToken = base64_decode(strtr($stateRaw, '-_', '+/') . str_repeat('=', strlen($stateRaw) % 4));
+        $sessionToken = base64_decode(strtr($stateRaw, '-_', '+/') . str_repeat('=', (4 - strlen($stateRaw) % 4) % 4));
         $cacheKey     = "auth_session:{$sessionToken}";
 
         try {
@@ -175,14 +178,19 @@ class GoogleAuthController extends Controller
             ->first();
 
         if ($oauthProvider) {
-            $user  = $oauthProvider->user;
-            $token = $user->createToken('mobile-app')->plainTextToken;
-            Cache::put($cacheKey, [
-                'status' => 'success',
-                'token'  => $token,
-                'user'   => $user->only(['id', 'name', 'email']),
-            ], 300);
-            return view('auth.complete', ['status' => 'success']);
+            $user = $oauthProvider->user;
+            if (! $user) {
+                // Orphaned provider record — user was deleted. Clean up and treat as new user.
+                $oauthProvider->delete();
+            } else {
+                $token = $user->createToken('mobile-app')->plainTextToken;
+                Cache::put($cacheKey, [
+                    'status' => 'success',
+                    'token'  => $token,
+                    'user'   => $user->only(['id', 'name', 'email', 'avatar_path']),
+                ], 300);
+                return view('auth.complete', ['status' => 'success']);
+            }
         }
 
         // Email registered via another method — link and log in.
@@ -193,47 +201,40 @@ class GoogleAuthController extends Controller
                 'provider_user_id' => $googleUser->getId(),
                 'provider_token'   => $googleUser->token,
             ]);
+            if (! $existingUser->google_id) {
+                $existingUser->update([
+                    'google_id'   => $googleUser->getId(),
+                    'avatar_path' => $existingUser->avatar_path ?? $googleUser->getAvatar(),
+                ]);
+            }
             $token = $existingUser->createToken('mobile-app')->plainTextToken;
             Cache::put($cacheKey, [
                 'status' => 'success',
                 'token'  => $token,
-                'user'   => $existingUser->only(['id', 'name', 'email']),
+                'user'   => $existingUser->fresh()->only(['id', 'name', 'email', 'avatar_path']),
             ], 300);
             return view('auth.complete', ['status' => 'success']);
         }
 
-        // Brand-new user — Google already verified the email, create account directly.
-        DB::beginTransaction();
-        try {
-            $user = User::create([
-                'name'              => $googleUser->getName() ?? 'User',
-                'email'             => $googleUser->getEmail(),
-                'email_verified_at' => now(),
-                'password'          => bcrypt(Str::random(32)),
-            ]);
+        // Brand-new user — send OTP to their email and show the browser OTP entry page.
+        $otp   = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $email = $googleUser->getEmail();
 
-            $user->oauthProviders()->create([
-                'provider'         => 'google',
-                'provider_user_id' => $googleUser->getId(),
-                'provider_token'   => $googleUser->token,
-            ]);
+        Cache::put("otp:{$email}", [
+            'otp'            => Hash::make($otp),
+            'google_sub'     => $googleUser->getId(),
+            'google_token'   => $googleUser->token,
+            'name'           => $googleUser->getName() ?? 'User',
+            'avatar_url'     => $googleUser->getAvatar(),
+            'email_verified' => true,
+        ], 600);
 
-            $user->assignRole('user');
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Cache::put($cacheKey, ['status' => 'error', 'message' => $e->getMessage()], 300);
-            return view('auth.complete', ['status' => 'error']);
-        }
+        Mail::to($email)->send(new OtpVerificationMail($otp));
 
-        $token = $user->createToken('mobile-app')->plainTextToken;
-        Cache::put($cacheKey, [
-            'status' => 'success',
-            'token'  => $token,
-            'user'   => $user->only(['id', 'name', 'email']),
-        ], 300);
-
-        return view('auth.complete', ['status' => 'success']);
+        return view('auth.otp-entry', [
+            'email'        => $email,
+            'sessionToken' => $sessionToken,
+        ]);
     }
 
     public function getSessionResult(Request $request, string $token)
@@ -252,8 +253,9 @@ class GoogleAuthController extends Controller
     public function verifyOtp(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'otp'   => 'required|string|size:6',
+            'email'         => 'required|email',
+            'otp'           => 'required|string|size:6',
+            'session_token' => 'nullable|string',
         ]);
 
         $cached = Cache::get("otp:{$request->email}");
@@ -269,6 +271,8 @@ class GoogleAuthController extends Controller
                 'email'             => $request->email,
                 'email_verified_at' => now(),
                 'password'          => bcrypt(Str::random(32)),
+                'google_id'         => $cached['google_sub'],
+                'avatar_path'       => $cached['avatar_url'] ?? null,
             ]);
 
             $user->oauthProviders()->create([
@@ -288,10 +292,22 @@ class GoogleAuthController extends Controller
         Cache::forget("otp:{$request->email}");
         Cache::forget("otp_resend:{$request->email}");
 
+        $token = $user->createToken('mobile-app')->plainTextToken;
+
+        // When called from the browser OTP page, store result in session cache so the
+        // app's polling loop can pick it up and dismiss the browser.
+        if ($request->input('session_token')) {
+            Cache::put("auth_session:{$request->input('session_token')}", [
+                'status' => 'success',
+                'token'  => $token,
+                'user'   => $user->fresh()->only(['id', 'name', 'email', 'avatar_path']),
+            ], 300);
+        }
+
         return response()->json([
             'status' => 'success',
             'user'   => $user->fresh(),
-            'token'  => $user->createToken('mobile-app')->plainTextToken,
+            'token'  => $token,
         ]);
     }
 

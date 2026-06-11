@@ -15,7 +15,7 @@ class UserResource extends JsonResource
             'phone'                   => $this->phone,
             'country'                 => $this->country,
             'gender'                  => $this->gender,
-            'avatar_url'              => $this->getFilamentAvatarUrl(),
+            'avatar_path'             => $this->getFilamentAvatarUrl(),
             'is_subscribed'           => $this->isSubscribed(),
             'has_active_trial'        => $this->hasActiveTrial(),
             'can_grant_trial'         => $this->canGrantTrial(),

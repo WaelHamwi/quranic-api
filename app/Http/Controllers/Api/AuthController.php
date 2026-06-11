@@ -78,4 +78,17 @@ class AuthController extends Controller
             return $this->error('Server error', 500);
         }
     }
+
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $user->tokens()->delete();
+            $user->delete();
+
+            return $this->success(null, 'Account deleted');
+        } catch (\Throwable $e) {
+            return $this->error('Server error', 500);
+        }
+    }
 }
